@@ -3,6 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <title>My Recipes</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -12,9 +13,9 @@
         }
         .container {
             max-width: 600px;
-            margin: 40px auto;
+            margin: 24px auto;
             background: #fff;
-            padding: 24px;
+            padding: 16px;
             border-radius: 8px;
             box-shadow: 0 2px 8px rgba(0,0,0,0.08);
         }
@@ -27,11 +28,12 @@
         }
         input, textarea {
             width: 100%;
-            padding: 8px;
+            padding: 10px;
             margin: 8px 0 16px 0;
             border: 1px solid #ccc;
             border-radius: 4px;
             font-size: 1em;
+            box-sizing: border-box;
         }
         button {
             background: #4caf50;
@@ -58,76 +60,89 @@
             text-decoration: underline;
             font-size: 0.95em;
         }
+        @media (max-width: 700px) {
+            .container {
+                max-width: 98vw;
+                margin: 8px;
+                padding: 8px;
+            }
+            input, textarea {
+                font-size: 1em;
+            }
+        }
     </style>
-</head>
 <body>
     <div class="container">
         <h1>My Recipes</h1>
         <form id="recipeForm">
             <input type="text" id="title" placeholder="Recipe Title" required>
-            <textarea id="ingredients" placeholder="Ingredients (one per line)" rows="3" required></textarea>
-            <textarea id="instructions" placeholder="Instructions" rows="3" required></textarea>
+            <textarea id="ingredients" placeholder="Ingredients (one per line)" rows="4" required></textarea>
+            <textarea id="instructions" placeholder="Instructions" rows="4" required></textarea>
             <button type="submit">Add Recipe</button>
         </form>
         <div id="recipes"></div>
     </div>
+
     <script>
-        // Load recipes from localStorage
-        function loadRecipes() {
-            return JSON.parse(localStorage.getItem('recipes') || '[]');
-        }
+    // Google Apps Script Web App URL
+    const API_URL = "https://script.google.com/macros/s/AKfycbxqbBC_UqYLshPqbgle2Rjg3_6R5Z6uFb0vgRE8bTHpNGnzXNvuZSvDgyAoKDeSsIfd/exec";
 
-        // Save recipes to localStorage
-        function saveRecipes(recipes) {
-            localStorage.setItem('recipes', JSON.stringify(recipes));
+    // Load recipes from Google Sheet
+    async function loadRecipes() {
+        try {
+            const res = await fetch(API_URL);
+            if (!res.ok) throw new Error('Failed to fetch recipes');
+            return await res.json();
+        } catch (e) {
+            alert('Could not load recipes.');
+            return [];
         }
+    }
 
-        // Render all recipes
-        function renderRecipes() {
-            const recipes = loadRecipes();
-            const recipesDiv = document.getElementById('recipes');
-            recipesDiv.innerHTML = '';
-            recipes.forEach((recipe, idx) => {
-                const div = document.createElement('div');
-                div.className = 'recipe';
-                div.innerHTML = `
-                    <h3>${recipe.title}</h3>
-                    <strong>Ingredients:</strong>
-                    <ul>${recipe.ingredients.split('\n').map(i => `<li>${i}</li>`).join('')}</ul>
-                    <strong>Instructions:</strong>
-                    <p>${recipe.instructions.replace(/\n/g, '<br>')}</p>
-                    <button onclick="deleteRecipe(${idx})">Delete</button>
-                    <a class="share-link" href="mailto:?subject=Recipe: ${encodeURIComponent(recipe.title)}&body=${encodeURIComponent('Ingredients:\n' + recipe.ingredients + '\n\nInstructions:\n' + recipe.instructions)}" target="_blank">Share via Email</a>
-                `;
-                recipesDiv.appendChild(div);
-            });
-        }
+    // Render all recipes (no delete button)
+    async function renderRecipes() {
+        const recipes = await loadRecipes();
+        const recipesDiv = document.getElementById('recipes');
+        recipesDiv.innerHTML = '';
+        recipes.forEach((recipe) => {
+            const div = document.createElement('div');
+            div.className = 'recipe';
+            div.innerHTML = `
+                <h3>${recipe.title}</h3>
+                <strong>Ingredients:</strong>
+                <ul>${recipe.ingredients.split('\n').map(i => `<li>${i}</li>`).join('')}</ul>
+                <strong>Instructions:</strong>
+                <p>${recipe.instructions.replace(/\n/g, '<br>')}</p>
+                <a class="share-link" href="mailto:?subject=Recipe: ${encodeURIComponent(recipe.title)}&body=${encodeURIComponent('Ingredients:\n' + recipe.ingredients + '\n\nInstructions:\n' + recipe.instructions)}" target="_blank">Share via Email</a>
+            `;
+            recipesDiv.appendChild(div);
+        });
+    }
 
-        // Add new recipe
-        document.getElementById('recipeForm').onsubmit = function(e) {
+    // Add new recipe
+    document.addEventListener('DOMContentLoaded', function() {
+        renderRecipes();
+        document.getElementById('recipeForm').onsubmit = async function(e) {
             e.preventDefault();
             const title = document.getElementById('title').value.trim();
             const ingredients = document.getElementById('ingredients').value.trim();
             const instructions = document.getElementById('instructions').value.trim();
             if (title && ingredients && instructions) {
-                const recipes = loadRecipes();
-                recipes.push({ title, ingredients, instructions });
-                saveRecipes(recipes);
-                renderRecipes();
-                this.reset();
+                try {
+                    const res = await fetch(API_URL, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ title, ingredients, instructions })
+                    });
+                    if (!res.ok) throw new Error('Failed to add recipe');
+                    this.reset();
+                    renderRecipes();
+                } catch (e) {
+                    alert('Could not add recipe.');
+                }
             }
         };
-
-        // Delete recipe
-        function deleteRecipe(idx) {
-            const recipes = loadRecipes();
-            recipes.splice(idx, 1);
-            saveRecipes(recipes);
-            renderRecipes();
-        }
-
-        // Initial render
-        renderRecipes();
+    });
     </script>
 </body>
 </html>

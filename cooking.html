@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>My Recipes</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: #f8f8f8;
+            margin: 0;
+            padding: 0;
+        }
+        .container {
+            max-width: 600px;
+            margin: 40px auto;
+            background: #fff;
+            padding: 24px;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        }
+        h1 {
+            text-align: center;
+            color: #333;
+        }
+        form {
+            margin-bottom: 24px;
+        }
+        input, textarea {
+            width: 100%;
+            padding: 8px;
+            margin: 8px 0 16px 0;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            font-size: 1em;
+        }
+        button {
+            background: #4caf50;
+            color: #fff;
+            border: none;
+            padding: 10px 18px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 1em;
+        }
+        button:hover {
+            background: #388e3c;
+        }
+        .recipe {
+            background: #f1f1f1;
+            padding: 16px;
+            border-radius: 6px;
+            margin-bottom: 16px;
+        }
+        .share-link {
+            display: block;
+            margin-top: 8px;
+            color: #1976d2;
+            text-decoration: underline;
+            font-size: 0.95em;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>My Recipes</h1>
+        <form id="recipeForm">
+            <input type="text" id="title" placeholder="Recipe Title" required>
+            <textarea id="ingredients" placeholder="Ingredients (one per line)" rows="3" required></textarea>
+            <textarea id="instructions" placeholder="Instructions" rows="3" required></textarea>
+            <button type="submit">Add Recipe</button>
+        </form>
+        <div id="recipes"></div>
+    </div>
+    <script>
+        // Load recipes from localStorage
+        function loadRecipes() {
+            return JSON.parse(localStorage.getItem('recipes') || '[]');
+        }
+
+        // Save recipes to localStorage
+        function saveRecipes(recipes) {
+            localStorage.setItem('recipes', JSON.stringify(recipes));
+        }
+
+        // Render all recipes
+        function renderRecipes() {
+            const recipes = loadRecipes();
+            const recipesDiv = document.getElementById('recipes');
+            recipesDiv.innerHTML = '';
+            recipes.forEach((recipe, idx) => {
+                const div = document.createElement('div');
+                div.className = 'recipe';
+                div.innerHTML = `
+                    <h3>${recipe.title}</h3>
+                    <strong>Ingredients:</strong>
+                    <ul>${recipe.ingredients.split('\n').map(i => `<li>${i}</li>`).join('')}</ul>
+                    <strong>Instructions:</strong>
+                    <p>${recipe.instructions.replace(/\n/g, '<br>')}</p>
+                    <button onclick="deleteRecipe(${idx})">Delete</button>
+                    <a class="share-link" href="mailto:?subject=Recipe: ${encodeURIComponent(recipe.title)}&body=${encodeURIComponent('Ingredients:\n' + recipe.ingredients + '\n\nInstructions:\n' + recipe.instructions)}" target="_blank">Share via Email</a>
+                `;
+                recipesDiv.appendChild(div);
+            });
+        }
+
+        // Add new recipe
+        document.getElementById('recipeForm').onsubmit = function(e) {
+            e.preventDefault();
+            const title = document.getElementById('title').value.trim();
+            const ingredients = document.getElementById('ingredients').value.trim();
+            const instructions = document.getElementById('instructions').value.trim();
+            if (title && ingredients && instructions) {
+                const recipes = loadRecipes();
+                recipes.push({ title, ingredients, instructions });
+                saveRecipes(recipes);
+                renderRecipes();
+                this.reset();
+            }
+        };
+
+        // Delete recipe
+        function deleteRecipe(idx) {
+            const recipes = loadRecipes();
+            recipes.splice(idx, 1);
+            saveRecipes(recipes);
+            renderRecipes();
+        }
+
+        // Initial render
+        renderRecipes();
+    </script>
+</body>
+</html>
